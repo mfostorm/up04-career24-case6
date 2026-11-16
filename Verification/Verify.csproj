@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0-windows</TargetFramework><OutputType>Exe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms><EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><StartupObject>Career24.Case5.Verify</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Verify.cs" />
+    <Compile Include="../Program/*.cs" Link="Career24/%(Filename)%(Extension)" />
+    <PackageReference Include="MySql.Data" Version="9.4.0" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,14 @@
+.vs/
+**/bin/
+**/obj/
+App/
+artifacts/
+*.user
+*.log
+*.ini
+*.zip
+*.sha256
+connection.json
+credentials.json
+*-key.txt
+*.env

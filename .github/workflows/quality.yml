@@ -1,0 +1,60 @@
+name: Сборка и автотесты
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows · MySQL · .NET
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Установить SDK .NET 8
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Собрать приложение и проверки
+        shell: pwsh
+        run: |
+          dotnet build Career24.sln -c Release
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet build Verification/Verify.csproj -c Release
+
+      - name: Опубликовать Windows x64
+        shell: pwsh
+        run: dotnet publish Program/Career24.csproj -c Release -r win-x64 --self-contained true -o artifacts/Kit/App
+
+      - name: Проверить приложение с MySQL
+        shell: pwsh
+        run: ./Verification/Run-CI.ps1 -App artifacts/Kit/App/Career24.exe -Output artifacts/Proof
+
+      - name: Собрать комплект для запуска
+        shell: pwsh
+        run: |
+          Copy-Item -Path Database,Launch -Destination artifacts/Kit -Recurse
+          Copy-Item -Path "Запустить Карьеру.cmd",README.md -Destination artifacts/Kit
+
+      - name: Сохранить проверенный комплект
+        uses: actions/upload-artifact@v7
+        with:
+          name: Career24-win-x64
+          path: artifacts/Kit/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Сохранить протокол
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Test-results
+          path: artifacts/Proof/
+          if-no-files-found: ignore
+          retention-days: 14

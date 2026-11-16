@@ -1,0 +1,4 @@
+USE career24_up04;
+ALTER TABLE candidates
+    MODIFY phone VARCHAR(24) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL,
+    MODIFY email VARCHAR(700) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL;
