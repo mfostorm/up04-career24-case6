@@ -13,7 +13,7 @@ internal sealed class ContactCipher
     public ContactCipher(string key)
     {
         if (string.IsNullOrWhiteSpace(key))
-            throw new InvalidOperationException("Для контактов не настроен ключ кейса 5.");
+            throw new InvalidOperationException("Для контактов не настроен ключ шифрования.");
         keyword = Utf8.GetBytes(key);
     }
 

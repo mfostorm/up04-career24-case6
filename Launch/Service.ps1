@@ -1,7 +1,7 @@
-param(
+﻿param(
     [ValidateSet('Prepare','Start','Stop','ShowTables')]
     [string]$Action = 'Start',
-    [string]$State = (Join-Path $env:LOCALAPPDATA 'Career24-UP04-Case5'),
+    [string]$State = (Join-Path $env:LOCALAPPDATA 'Career24-UP04-Case6'),
     [int]$Port = 33435,
     [string]$App,
     [string]$LegacyDump,
@@ -16,16 +16,16 @@ $ProgressPreference = 'SilentlyContinue'
 $recoveryKey = $null
 if ($RecoveryDump -or $RecoveryKeyFile) {
     if (!$RecoveryDump -or !$RecoveryKeyFile -or $LegacyDump -or $Action -notin @('Prepare','Start')) {
-        throw 'Use RecoveryDump and RecoveryKeyFile together for Prepare or Start in a new profile.'
+        throw 'Укажите RecoveryDump и RecoveryKeyFile вместе и выберите новый профиль для запуска или подготовки.'
     }
     $RecoveryDump=(Resolve-Path -LiteralPath $RecoveryDump).ProviderPath
     $hash=(Get-FileHash -Algorithm SHA256 -LiteralPath $RecoveryDump).Hash
     $expected=((Get-Content -Raw -LiteralPath "$RecoveryDump.sha256").Trim() -split '\s+',2)[0]
     if ($expected -notmatch '^[a-fA-F0-9]{64}$' -or $expected -ne $hash) {
-        throw 'The recovery dump failed SHA-256 verification.'
+        throw 'Контрольная сумма SHA-256 файла восстановления не совпала.'
     }
     $recoveryKey=(Get-Content -Raw -LiteralPath $RecoveryKeyFile).Trim()
-    if ($recoveryKey -notmatch '^[a-fA-F0-9]{32}$') { throw 'Invalid Case 5 recovery key file.' }
+    if ($recoveryKey -notmatch '^[a-fA-F0-9]{32}$') { throw 'Повреждён или неверно выбран файл ключа восстановления.' }
 }
 
 function Locate-MySql {
@@ -39,13 +39,13 @@ function Locate-MySql {
         }
     }
     if ($Action -in @('Stop','ShowTables')) {
-        throw 'MySQL binaries were not found. Run the launcher first.'
+        throw 'Файлы MySQL не найдены. Сначала запустите «Запустить Карьеру.cmd».'
     }
-    Write-Host 'Downloading MySQL Community Server from cdn.mysql.com (first launch only)...'
+    Write-Host 'Скачиваю MySQL Community Server с cdn.mysql.com. Это понадобится только при первом запуске.'
     $zip = Join-Path $State 'mysql-server.zip'
     Invoke-WebRequest -UseBasicParsing -Uri 'https://cdn.mysql.com/Downloads/MySQL-8.0/mysql-8.0.46-winx64.zip' -OutFile $zip
     Expand-Archive -LiteralPath $zip -DestinationPath $State -Force
-    if (!(Test-Path -LiteralPath (Join-Path $download 'bin\mysqld.exe'))) { throw 'MySQL was not extracted.' }
+    if (!(Test-Path -LiteralPath (Join-Path $download 'bin\mysqld.exe'))) { throw 'Не удалось распаковать MySQL.' }
     Remove-Item -LiteralPath $zip
     return $download
 }
@@ -79,7 +79,7 @@ function Run-Client([string]$optionFile, [string]$sql, [string]$dumpPath) {
         $process.StandardInput.Close()
         if (!$process.WaitForExit(20000)) {
             $process.Kill()
-            throw 'MySQL client did not respond in time.'
+            throw 'Клиент MySQL не ответил вовремя.'
         }
         if ($process.ExitCode -ne 0) { throw $stderr.GetAwaiter().GetResult().Trim() }
         return $stdout.GetAwaiter().GetResult().Trim()
@@ -106,16 +106,16 @@ function Query-OwnServer {
         $dir = Run-Client $rootSettings 'SELECT @@datadir;'
         if (!$dir) { return $false }
         $actual = [IO.Path]::GetFullPath($dir.TrimEnd('/','\'))
-        if ($actual -ne $dataDir) { throw "The server on port $Port belongs to another data directory." }
+        if ($actual -ne $dataDir) { throw "Сервер на порту $Port использует другой каталог данных." }
         return $true
     } catch {
-        if ($_.Exception.Message -like '*another data directory*') { throw }
+        if ($_.Exception.Message -like '*использует другой каталог данных*') { throw }
         return $false
     }
 }
 
 if ($Action -in @('Stop','ShowTables') -and !(Test-Path -LiteralPath $State)) {
-    throw 'Run the Career24 launcher first.'
+    throw 'Сначала запустите «Запустить Карьеру.cmd».'
 }
 New-Item -ItemType Directory -Path $State -Force | Out-Null
 $State = (Resolve-Path -LiteralPath $State).ProviderPath
@@ -132,16 +132,16 @@ $gate = New-Object Threading.Mutex($false, "Local\Career24UP04_Case5_$stateHash"
 $locked = $false
 try {
     try { $locked = $gate.WaitOne(150000) } catch [Threading.AbandonedMutexException] { $locked = $true }
-    if (!$locked) { throw 'Another launcher is still starting MySQL.' }
+    if (!$locked) { throw 'MySQL ещё запускается в другом окне.' }
     $mysqlBase = Locate-MySql
     $server = Join-Path $mysqlBase 'bin\mysqld.exe'
     $client = Join-Path $mysqlBase 'bin\mysql.exe'
     if (Test-Path -LiteralPath $credentials) {
         $auth = Get-Content -Raw -LiteralPath $credentials | ConvertFrom-Json
-        if ($RecoveryDump) { throw 'Choose a new profile for the full recovery.' }
+        if ($RecoveryDump) { throw 'Для полного восстановления выберите новый профиль.' }
         $Port = [int]$auth.port
     } else {
-        if ($Action -in @('Stop','ShowTables')) { throw 'Initial setup is required.' }
+        if ($Action -in @('Stop','ShowTables')) { throw 'Сначала подготовьте учебную базу.' }
         while (Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue) { $Port += 1 }
         $auth = [ordered]@{
             port=$Port
@@ -160,12 +160,12 @@ try {
     if ($Action -eq 'Stop') {
         if (Query-OwnServer) {
             [void](Run-Client $rootSettings 'SHUTDOWN;')
-            Write-Host 'Career24 MySQL stopped.'
+            Write-Host 'Учебная база «Карьера» остановлена.'
         }
         return
     }
     if ($Action -eq 'ShowTables') {
-        if (!(Query-OwnServer)) { throw 'Start the Career24 database first.' }
+        if (!(Query-OwnServer)) { throw 'Сначала запустите базу «Карьера».' }
         & $client "--defaults-file=$managerSettings" '--table' '--database=career24_up04' '--execute=SELECT VERSION() AS MySQL; SELECT CURRENT_ROLE(); SELECT id,phone,email FROM candidates WHERE id <= 3 ORDER BY id;'
         return
     }
@@ -185,15 +185,15 @@ log-error="$logPath"
 "@
     if (!(Query-OwnServer)) {
         if (Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue) {
-            throw "Port $Port is occupied. Check the documentation."
+            throw "Порт $Port занят. Укажите свободный порт."
         }
         [IO.File]::WriteAllText($serverOptions, $options, $utf8)
         $serverArg = '--defaults-file="{0}"' -f $serverOptions
         $bootstrap = Join-Path $State 'bootstrap.sql'
         if (!(Test-Path -LiteralPath (Join-Path $dataDir 'mysql.ibd'))) {
-            Write-Host 'Preparing the local MySQL data directory...'
+            Write-Host 'Подготавливаю локальный каталог данных MySQL.'
             $initial = Start-Process -FilePath $server -ArgumentList @($serverArg,'--initialize-insecure') -WindowStyle Hidden -PassThru -Wait
-            if ($initial.ExitCode -ne 0) { throw "MySQL initialization failed. See $logPath" }
+            if ($initial.ExitCode -ne 0) { throw "Не удалось подготовить MySQL. Журнал: $logPath" }
             $alter = "ALTER USER 'root'@'localhost' IDENTIFIED BY '$($auth.admin)';"
             [IO.File]::WriteAllText($bootstrap, ($alter + [Environment]::NewLine), $utf8)
         }
@@ -206,18 +206,18 @@ log-error="$logPath"
             if ($worker.HasExited) { break }
             Start-Sleep -Milliseconds 500
         }
-        if (!$ready) { throw "MySQL did not start. See $logPath" }
+        if (!$ready) { throw "MySQL не запустилась. Журнал: $logPath" }
         if (Test-Path -LiteralPath $bootstrap) { Remove-Item -LiteralPath $bootstrap }
     }
     if (!$App) { $App=Join-Path $root 'App\Career24.exe' }
-    if (!(Test-Path -LiteralPath $App)) { throw "App file was not found: $App" }
+    if (!(Test-Path -LiteralPath $App)) { throw "Файл приложения не найден: $App" }
     $App=(Resolve-Path -LiteralPath $App).ProviderPath
     $marker=Join-Path $State 'case5-v1.ready'
     if ($LegacyDump -and (Test-Path -LiteralPath $marker)) {
-        throw 'Use a new isolated Case 5 profile when importing a Case 2 snapshot.'
+        throw 'Для импорта копии из кейса 2 выберите новый профиль.'
     }
     if (!(Test-Path -LiteralPath $marker)) {
-        Write-Host 'Preparing Case 5 tables, contact encryption and MySQL roles...'
+        Write-Host 'Подготавливаю таблицы, шифрование контактов и роли MySQL.'
         [void](Run-Client $rootSettings ([IO.File]::ReadAllText((Join-Path $root 'Database\01_schema.sql'), $utf8)))
         if ((Run-Client $rootSettings 'SELECT COUNT(*) FROM career24_up04.roles;') -eq '0') {
             if ($LegacyDump -or $RecoveryDump) {
@@ -239,7 +239,7 @@ log-error="$logPath"
             [IO.File]::WriteAllText($migration, ($data | ConvertTo-Json), $utf8)
             $m=Start-Process -FilePath $App -ArgumentList @('--migrate-contacts',
                 ('"{0}"' -f $migration),('"{0}"' -f $migrationLog)) -WindowStyle Hidden -Wait -PassThru
-            if ($m.ExitCode -ne 0) { throw "Contact migration failed. See $migrationLog" }
+            if ($m.ExitCode -ne 0) { throw "Контакты не перенесены. Журнал: $migrationLog" }
         }
         finally { if (Test-Path -LiteralPath $migration) { Remove-Item -LiteralPath $migration } }
 
@@ -271,7 +271,7 @@ SET DEFAULT ROLE 'c5_r_backup' TO 'c5_backup'@'127.0.0.1';
     }
     [IO.File]::WriteAllText($connection, ($connectionData | ConvertTo-Json), $utf8)
     [IO.File]::WriteAllText((Join-Path $State 'mysql-home.txt'),$mysqlBase,$utf8)
-    Write-Host "Career24 is ready on 127.0.0.1:$Port"
+    Write-Host "База «Карьера» готова на 127.0.0.1:$Port"
 }
 finally {
     if ($locked) { $gate.ReleaseMutex() }

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory=$true)][string]$App,
     [Parameter(Mandatory=$true)][string]$Output,
     [switch]$Measure
@@ -15,12 +15,12 @@ $port=33445
 
 function Run-Service([string]$Action) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $service -Action $Action -App $appPath -State $state -Port $port
-    if ($LASTEXITCODE) { throw "MySQL action failed: $Action" }
+    if ($LASTEXITCODE) { throw "Сценарий MySQL завершился ошибкой на действии $Action." }
 }
 
 function Run-Verifier([string]$Mode, [string]$ResultPath) {
     & dotnet.exe $dll $Mode $state $ResultPath
-    if ($LASTEXITCODE) { throw "Verification failed: $Mode" }
+    if ($LASTEXITCODE) { throw "Ошибка в режиме проверки $Mode." }
 }
 
 $start=[Diagnostics.Stopwatch]::StartNew()

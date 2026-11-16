@@ -16,7 +16,7 @@ internal static class Program
         {
             string settingsPath = args.FirstOrDefault()
                 ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Career24-UP04-Case5", "connection.json");
+                    "Career24-UP04-Case6", "connection.json");
             var settings = JsonSerializer.Deserialize<ConnectionSettings>(
                 File.ReadAllText(settingsPath), new JsonSerializerOptions(JsonSerializerDefaults.Web))
                 ?? throw new InvalidOperationException("Файл подключения пуст.");
@@ -40,14 +40,14 @@ internal static class Program
         {
             var settings = JsonSerializer.Deserialize<MigrationSettings>(
                 File.ReadAllText(settingsPath), new JsonSerializerOptions(JsonSerializerDefaults.Web))
-                ?? throw new InvalidOperationException("Migration settings are empty.");
+                ?? throw new InvalidOperationException("Файл настроек переноса пуст.");
             int updated = ContactMigration.Run(settings);
-            File.WriteAllText(logPath, $"Rows migrated: {updated}");
+            File.WriteAllText(logPath, $"Перенесено записей: {updated}");
             return 0;
         }
         catch (Exception ex)
         {
-            File.WriteAllText(logPath, "Contact migration failed: " + ex.GetType().Name);
+            File.WriteAllText(logPath, "Не удалось перенести контакты: " + ex.GetType().Name);
             return 1;
         }
     }

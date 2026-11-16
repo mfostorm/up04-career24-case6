@@ -55,6 +55,7 @@ internal static class Verify
         else if (args[0]=="measure")
         {
             MeasureQueries();
+            return 0;
         }
         else
         {
@@ -71,7 +72,7 @@ internal static class Verify
             CheckApplication(true);
             File.WriteAllText(Path.Combine(folder,"checks-live.json"),JsonSerializer.Serialize(Passed,Json));
         }
-        Console.WriteLine($"{Passed.Count} passed.");
+        Console.WriteLine($"Пройдено проверок: {Passed.Count}.");
         return 0;
     }
 
@@ -229,6 +230,7 @@ internal static class Verify
             if (i>=0) measurements.Add(elapsed);
         }
         File.WriteAllText(Path.Combine(folder,"measurements.json"),JsonSerializer.Serialize(measurements,Json));
+        Console.WriteLine($"Записано замеров поиска: {measurements.Count}.");
     }
 
     private static void CaptureContact(Database db,Session manager,string email)

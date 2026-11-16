@@ -1,5 +1,5 @@
-param(
-    [string]$State = (Join-Path $env:LOCALAPPDATA 'Career24-UP04-Case5'),
+﻿param(
+    [string]$State = (Join-Path $env:LOCALAPPDATA 'Career24-UP04-Case6'),
     [Parameter(Mandatory=$true)][string]$SecondCopy,
     [Parameter(Mandatory=$true)][string]$OffsiteCopy
 )
@@ -18,7 +18,7 @@ $local=Destination (Join-Path $State 'Backups')
 $second=Destination $SecondCopy
 $remote=Destination $OffsiteCopy
 if (@(@($local,$second,$remote) | Sort-Object -Unique).Count -ne 3) {
-    throw 'Choose three different backup locations.'
+    throw 'Выберите три разных каталога для резервных копий.'
 }
 $stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,8)
 $filename="career24-$stamp.sql"
@@ -30,7 +30,7 @@ try {
       '--set-gtid-purged=OFF','--column-statistics=0','--default-character-set=utf8mb4','--hex-blob',
       "--result-file=$partial",'career24_up04')
     & $mysqldump @dumpOptions
-    if($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $partial)){throw 'mysqldump failed.'}
+    if($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $partial)){throw 'Не удалось создать копию через mysqldump.'}
     Move-Item -LiteralPath $partial -Destination $source
 } finally {
     if(Test-Path -LiteralPath $partial){Remove-Item -LiteralPath $partial}
@@ -43,7 +43,7 @@ foreach($directory in @($second,$remote)) {
     try {
         Copy-Item -LiteralPath $source -Destination $temp
         if((Get-FileHash -Algorithm SHA256 -LiteralPath $temp).Hash.ToLowerInvariant() -ne $hash){
-            throw "Copy verification failed: $directory"
+            throw "Не прошла проверка копии в каталоге $directory."
         }
         Move-Item -LiteralPath $temp -Destination $target
         $paths+=$target

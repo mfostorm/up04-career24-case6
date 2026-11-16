@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   windows:
-    name: Windows · MySQL · .NET
+    name: Проверка Windows, MySQL и .NET
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
@@ -45,7 +45,7 @@ jobs:
       - name: Сохранить проверенный комплект
         uses: actions/upload-artifact@v7
         with:
-          name: Career24-win-x64
+          name: Карьера для Windows x64
           path: artifacts/Kit/
           if-no-files-found: error
           retention-days: 14
@@ -54,7 +54,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: Test-results
+          name: Протокол проверок
           path: artifacts/Proof/
           if-no-files-found: ignore
           retention-days: 14
